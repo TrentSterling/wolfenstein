@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<!-- saved from url=(0099)file:///C:/Users/Alienware%20Aurora%20R4/Downloads/code%20-%202025-04-11T130902.422%20-%20Copy.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Raycaster</title>
+    <style>
+        body {
+            background-color: #111;
+            color: #eee;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden; /* Prevent scrollbars from messing things up */
+        }
+        #gameScreen {
+            white-space: pre;
+            font-size: 12px; /* Smaller font size usually looks better */
+            line-height: 1.0;
+            border: 1px solid #444;
+            background-color: #000;
+            /* Adjust width/height based on SCREEN_WIDTH/HEIGHT and font size/line height */
+            /* These might need tweaking based on your browser/OS rendering */
+            width: calc(120 * 0.6em); /* SCREEN_WIDTH * approx character width */
+            height: calc(40 * 1.0em); /* SCREEN_HEIGHT * line height */
+            box-sizing: content-box;
+        }
+        #gameMessages {
+            margin-top: 10px;
+            font-size: 16px;
+            min-height: 20px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ASCII Raycaster Thingy</h1>
+
+    <div id="gameScreen">                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+#                                                                                                                       
+#                                                                                                                       
+#                                                                                                                       
+#                                                                                                           %%%%%%%%%%%%
+#                                                                                                           %%%%%%%%%%%%
+#                                                                                                           %%%%%%%%%%%%
+#                                                                                                           %%%%%%%%%%%%
+#               ##***                                                              #########################%%%%%%%%%%%%
+#    #############**********************                                  ##################################%%%%%%%%%%%%
+##################*****************************+++++++++                  ##################################%%%%%%%%%%%%
+##################*****************************++++++++++++++             ##################################%%%%%%%%%%%%
+##################*****************************+++++++++++++++++++++++++++##################################%%%%%%%%%%%%
+##################*****************************+++++++++++++++++++++++++++##################################%%%%%%%%%%%%
+##################*****************************+++++++++++++++++++++++++++##################################%%%%%%%%%%%%
+##################*****************************+++++++++++++++++++++++++++##################################%%%%%%%%%%%%
+##################*****************************+++++++++++++++++++++++++++##################################%%%%%%%%%%%%
+##################*****************************+++++++++++++++++++++++++++##################################%%%%%%%%%%%%
+##################*****************************+++++++++++++++++++++++++++##################################%%%%%%%%%%%%
+##################*****************************++++++++++++++-------------##################################%%%%%%%%%%%%
+##################*****************************+++++++++------------------##################################%%%%%%%%%%%%
+#----#############**********************----------------------------------##################################%%%%%%%%%%%%
+#---------------##***--------------------------------------------------------------#########################%%%%%%%%%%%%
+#-----------------------------------------------------------------------------------------------------------%%%%%%%%%%%%
+#-----------------------------------------------------------------------------------------------------------%%%%%%%%%%%%
+#-----------------------------------------------------------------------------------------------------------%%%%%%%%%%%%
+#-----------------------------------------------------------------------------------------------------------%%%%%%%%%%%%
+#=======================================================================================================================
+#=======================================================================================================================
+#=======================================================================================================================
+========================================================================================================================
+========================================================================================================================
+========================================================================================================================
+========================================================================================================================
+========================================================================================================================</div>
+    <div id="gameMessages">Use WASD to move, QE to turn.</div>
+
+    <script>
+        // --- Configuration ---
+        const SCREEN_WIDTH = 120; // Characters wide
+        const SCREEN_HEIGHT = 40; // Characters tall
+
+        const MAP_WIDTH = 24;
+        const MAP_HEIGHT = 24;
+
+        const FOV = Math.PI / 3; // Field of View (60 degrees)
+        const MOVE_SPEED = 0.08; // Units per frame
+        const ROTATION_SPEED = 0.05; // Radians per frame
+
+        // Character sets for shading/texture
+        const WALL_CHARS = ['@', '%', '#', '*', '+', '=', '-', ':', '.', ' ']; // Dense to sparse (close to far)
+        const FLOOR_CHAR = '.';
+        const CEILING_CHAR = ' '; // Use space for ceiling
+
+        // --- Game State ---
+        let player = {
+            x: 3.5, // Start position (use floating point)
+            y: 3.5,
+            angle: Math.PI / 4 // Start angle (radians)
+        };
+
+        // Simple map (0 = empty, 1 = wall)
+        const map = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,0,0,1,0,1,0,1,0,1,1,1,1,1,0,1,1,1,0,1],
+            [1,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1],
+            [1,0,0,0,0,1,0,1,1,1,0,1,1,1,0,1,0,0,0,1,0,1,0,1],
+            [1,0,1,1,0,1,0,0,0,0,0,0,0,0,0,1,0,1,1,1,0,0,0,1],
+            [1,0,0,0,0,1,0,1,0,1,1,1,1,1,0,1,0,0,0,1,0,1,0,1],
+            [1,1,1,1,0,1,0,1,0,0,0,0,0,0,0,1,1,1,0,1,1,1,0,1],
+            [1,0,0,0,0,0,0,1,0,1,1,0,1,1,1,1,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,0,1,0,0,0,1,0,0,0,1,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,1,0,1,0,1,0,1,0,0,0,0,0,1,0,1],
+            [1,1,1,1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,1,1,0,1,0,1],
+            [1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1,1,1],
+            [1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+            [1,1,0,1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,1,1,1,1,0,1],
+            [1,0,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1],
+            [1,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1],
+            [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,1,0,1],
+            [1,0,1,1,1,1,1,1,0,1,0,1,1,1,1,1,1,1,0,1,0,1,0,1],
+            [1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,1,0,1,0,1,1,1,1,1,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        // --- DOM Elements ---
+        const gameScreen = document.getElementById('gameScreen');
+        const gameMessages = document.getElementById('gameMessages');
+
+        // --- Input Handling ---
+        let keysPressed = {};
+        document.addEventListener('keydown', (event) => { keysPressed[event.key.toLowerCase()] = true; });
+        document.addEventListener('keyup', (event) => { keysPressed[event.key.toLowerCase()] = false; });
+
+        // --- Helper Functions ---
+        function isWall(x, y) {
+            const mapX = Math.floor(x);
+            const mapY = Math.floor(y);
+            if (mapX < 0 || mapX >= MAP_WIDTH || mapY < 0 || mapY >= MAP_HEIGHT) {
+                return true; // Treat out of bounds as walls
+            }
+            return map[mapY][mapX] === 1;
+        }
+
+        // --- Main Rendering Function (Raycasting) ---
+        function renderFrame() {
+            let screenBuffer = Array(SCREEN_HEIGHT).fill(0).map(() => Array(SCREEN_WIDTH).fill(' '));
+
+            for (let x = 0; x < SCREEN_WIDTH; x++) {
+                // Calculate ray angle for this column
+                const rayAngle = player.angle - FOV / 2 + (x / SCREEN_WIDTH) * FOV;
+
+                const dirX = Math.cos(rayAngle);
+                const dirY = Math.sin(rayAngle);
+
+                let mapX = Math.floor(player.x);
+                let mapY = Math.floor(player.y);
+
+                // Length of ray from current position to next x or y-side
+                let sideDistX, sideDistY;
+
+                // Length of ray from one x or y-side to next x or y-side
+                const deltaDistX = Math.abs(1 / dirX);
+                const deltaDistY = Math.abs(1 / dirY);
+                let perpWallDist;
+
+                // Which direction to step in x or y-direction (either +1 or -1)
+                let stepX, stepY;
+
+                let hit = 0; // Was a wall hit?
+                let side; // Was a NS or a EW wall hit?
+
+                // Calculate step and initial sideDist
+                if (dirX < 0) {
+                    stepX = -1;
+                    sideDistX = (player.x - mapX) * deltaDistX;
+                } else {
+                    stepX = 1;
+                    sideDistX = (mapX + 1.0 - player.x) * deltaDistX;
+                }
+                if (dirY < 0) {
+                    stepY = -1;
+                    sideDistY = (player.y - mapY) * deltaDistY;
+                } else {
+                    stepY = 1;
+                    sideDistY = (mapY + 1.0 - player.y) * deltaDistY;
+                }
+
+                // Perform DDA (Digital Differential Analysis)
+                while (hit === 0) {
+                    // Jump to next map square, OR in x-direction, OR in y-direction
+                    if (sideDistX < sideDistY) {
+                        sideDistX += deltaDistX;
+                        mapX += stepX;
+                        side = 0; // Hit an East/West wall
+                    } else {
+                        sideDistY += deltaDistY;
+                        mapY += stepY;
+                        side = 1; // Hit a North/South wall
+                    }
+                    // Check if ray has hit a wall
+                    if (mapX < 0 || mapX >= MAP_WIDTH || mapY < 0 || mapY >= MAP_HEIGHT) {
+                         // Hit edge of map, treat as a very distant wall
+                         hit = 1;
+                         perpWallDist = Infinity;
+                    } else if (map[mapY][mapX] > 0) {
+                        hit = 1;
+                    }
+                }
+
+                 // Calculate distance projected on camera direction (Euclidean distance would give fisheye effect)
+                if (side === 0) {
+                    perpWallDist = (mapX - player.x + (1 - stepX) / 2) / dirX;
+                } else {
+                    perpWallDist = (mapY - player.y + (1 - stepY) / 2) / dirY;
+                }
+
+                // Calculate height of line to draw on screen
+                const lineHeight = Math.floor(SCREEN_HEIGHT / perpWallDist);
+
+                // Calculate lowest and highest pixel to fill in current stripe
+                let drawStart = -lineHeight / 2 + SCREEN_HEIGHT / 2;
+                if (drawStart < 0) drawStart = 0;
+                let drawEnd = lineHeight / 2 + SCREEN_HEIGHT / 2;
+                if (drawEnd >= SCREEN_HEIGHT) drawEnd = SCREEN_HEIGHT - 1;
+
+                // Choose wall character based on distance
+                // Further away walls get sparser characters
+                const distanceFactor = Math.min(1, perpWallDist / (Math.max(MAP_WIDTH, MAP_HEIGHT) * 0.5)); // Normalize distance somewhat
+                const shadeIndex = Math.min(WALL_CHARS.length - 1, Math.floor(distanceFactor * WALL_CHARS.length));
+                let wallChar = WALL_CHARS[shadeIndex];
+
+                // Give N/S walls slightly different character for contrast (optional)
+                if (side === 1) {
+                    // Find the next sparser character if possible
+                     const darkerIndex = Math.min(WALL_CHARS.length - 1, shadeIndex + 1);
+                     wallChar = WALL_CHARS[darkerIndex]; // Often ':' or '.' looks okay for side walls
+                }
+
+
+                // Draw the characters for this vertical stripe
+                for (let y = 0; y < SCREEN_HEIGHT; y++) {
+                    if (y < drawStart) {
+                        screenBuffer[y][x] = CEILING_CHAR;
+                    } else if (y >= drawStart && y <= drawEnd) {
+                        screenBuffer[y][x] = wallChar;
+                    } else {
+                         // Floor shading based on distance from viewer (optional)
+                         const floorDistFactor = y / SCREEN_HEIGHT; // 0 near horizon, 1 at bottom
+                         if (floorDistFactor < 0.6) screenBuffer[y][x] = FLOOR_CHAR;
+                         else if (floorDistFactor < 0.8) screenBuffer[y][x] = '-';
+                         else screenBuffer[y][x] = '=';
+                        // screenBuffer[y][x] = FLOOR_CHAR; // Simple floor
+                    }
+                }
+            }
+
+            // Convert buffer to string and display
+            const screenString = screenBuffer.map(row => row.join('')).join('\n');
+            gameScreen.textContent = screenString;
+        }
+
+        // --- Game Loop ---
+        function updateGame() {
+            let dx = 0;
+            let dy = 0;
+            let angleChange = 0;
+
+            // Rotation
+            if (keysPressed['q']) { angleChange -= ROTATION_SPEED; }
+            if (keysPressed['e']) { angleChange += ROTATION_SPEED; }
+
+            // Movement (Forward/Backward)
+            if (keysPressed['w']) {
+                dx += Math.cos(player.angle) * MOVE_SPEED;
+                dy += Math.sin(player.angle) * MOVE_SPEED;
+            }
+            if (keysPressed['s']) {
+                dx -= Math.cos(player.angle) * MOVE_SPEED;
+                dy -= Math.sin(player.angle) * MOVE_SPEED;
+            }
+
+            // Strafing (Left/Right)
+            if (keysPressed['a']) {
+                dx += Math.sin(player.angle) * MOVE_SPEED; // Sideways vector is sin(angle)
+                dy -= Math.cos(player.angle) * MOVE_SPEED; // and -cos(angle)
+            }
+            if (keysPressed['d']) {
+                dx -= Math.sin(player.angle) * MOVE_SPEED;
+                dy += Math.cos(player.angle) * MOVE_SPEED;
+            }
+
+            // Update angle
+            player.angle += angleChange;
+             // Keep angle within 0 to 2*PI
+             player.angle = (player.angle + Math.PI * 2) % (Math.PI * 2);
+
+
+            // Collision detection: Check target position BEFORE moving
+            const nextX = player.x + dx;
+            const nextY = player.y + dy;
+
+             // Simple collision: Check only the target point.
+             // More robust: Check a small radius or bounding box.
+            if (!isWall(nextX, player.y)) {
+                 player.x = nextX;
+            }
+             if (!isWall(player.x, nextY)) { // Check separately to allow sliding along walls
+                 player.y = nextY;
+            }
+
+            // Update messages (optional)
+            // gameMessages.textContent = `X: ${player.x.toFixed(2)} Y: ${player.y.toFixed(2)} A: ${(player.angle * 180 / Math.PI).toFixed(1)}°`;
+
+            renderFrame(); // Re-render after updates
+        }
+
+        // --- Start the game ---
+        console.log("Starting ASCII Raycaster...");
+        setInterval(updateGame, 50); // Update roughly 20 times per second
+
+    </script>
+
+
+</body></html>
