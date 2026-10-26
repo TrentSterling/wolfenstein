@@ -16,6 +16,8 @@ jobs:
         with:
           node-version: '24'
       - run: node --test tests/about-discovery/contract.cjs
+      - name: Projection geometry and gameplay contracts
+        run: node --test tests/projection/contract.cjs
       - name: Build Voxel Heroes when applicable
         if: github.event.repository.name == 'voxelheroes'
         run: npm ci && npm run build
@@ -28,10 +30,19 @@ jobs:
         env:
           REPO_NAME: ${{ github.event.repository.name }}
         run: node tests/about-discovery/browser.cjs
+      - name: Actual projection renders across viewport sizes
+        run: node tests/projection/browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: about-discovery-evidence
           path: .about-evidence/
+          include-hidden-files: true
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wolfenstein-projection-evidence
+          path: .projection-evidence/
           include-hidden-files: true
           retention-days: 7
