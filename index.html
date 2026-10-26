@@ -166,13 +166,17 @@
         // --- Main Rendering Function (Raycasting) ---
         function renderFrame() {
             let screenBuffer = Array(SCREEN_HEIGHT).fill(0).map(() => Array(SCREEN_WIDTH).fill(' '));
+            const forwardX = Math.cos(player.angle);
+            const forwardY = Math.sin(player.angle);
+            const planeScale = Math.tan(FOV / 2);
 
             for (let x = 0; x < SCREEN_WIDTH; x++) {
-                // Calculate ray angle for this column
-                const rayAngle = player.angle - FOV / 2 + (x / SCREEN_WIDTH) * FOV;
-
-                const dirX = Math.cos(rayAngle);
-                const dirY = Math.sin(rayAngle);
+                // Sample column centres on a flat camera plane, spanning the same 60-degree FOV.
+                // Leave rays unnormalized: their forward component is one, so DDA's
+                // distance parameter is perpendicular camera depth, not ray travel length.
+                const cameraX = 2 * (x + 0.5) / SCREEN_WIDTH - 1;
+                const dirX = forwardX - forwardY * planeScale * cameraX;
+                const dirY = forwardY + forwardX * planeScale * cameraX;
 
                 let mapX = Math.floor(player.x);
                 let mapY = Math.floor(player.y);
